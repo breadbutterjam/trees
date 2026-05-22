@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Marker</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top section - Form */
+        .form-section {
+            height: 50vh;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 16px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        /* Coordinates display */
+        .coordinates {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .coordinates-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .coordinates-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .locate-btn-small {
+            padding: 4px 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .locate-btn-small:active {
+            background: #218838;
+        }
+
+        .coordinates-values {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .coord-value {
+            flex: 1;
+        }
+
+        .coord-label {
+            font-size: 10px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .coord-number {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        /* Tree Type Selection */
+        .type-section {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .type-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .type-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .view-toggle {
+            background: none;
+            border: none;
+            color: #007bff;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* Visual Grid View */
+        .visual-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .tree-card {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .tree-card:active {
+            transform: scale(0.98);
+        }
+
+        .tree-card.selected {
+            border-color: #28a745;
+            background: #f0f8f4;
+        }
+
+        .tree-card img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            background: #e9ecef;
+        }
+
+        .tree-card-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .tree-card-scientific {
+            font-size: 10px;
+            color: #6c757d;
+            font-style: italic;
+            line-height: 1.2;
+        }
+
+        /* Dropdown View */
+        .dropdown-view {
+            display: none;
+        }
+
+        .dropdown-view.active {
+            display: block;
+        }
+
+        .visual-grid.active {
+            display: grid;
+        }
+
+        .visual-grid:not(.active) {
+            display: none;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            margin-bottom: 12px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+
+        /* Optional Details */
+        .optional-details {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .optional-toggle {
+            background: none;
+            border: none;
+            color: #007bff;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 0;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .optional-content {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .optional-content.expanded {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: #218838;
+        }
+
+        .btn-primary:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+        }
+
+        .btn-secondary:active {
+            background: #f8f9fa;
+        }
+
+        /* Edit mode specific */
+        .edit-mode .btn-primary {
+            background: #007bff;
+        }
+
+        .edit-mode .btn-primary:active {
+            background: #0056b3;
+        }
+
+        /* Bottom section - Map */
+        #map {
+            height: 50vh;
+            width: 100%;
+        }
+
+        /* Status message */
+        .status-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10000;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+
+        /* Loading state */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #28a745;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Status Message -->
+    <div class="status-message" id="statusMessage"></div>
+
+    <!-- Top Section - Form -->
+    <div class="form-section">
+        <!-- Coordinates -->
+        <div class="coordinates">
+            <div class="coordinates-header">
+                <span class="coordinates-title">Longitude, Latitude 📍</span>
+                <button class="locate-btn-small" id="locateBtnSmall">
+                    <span id="locateIcon">📍</span>
+                    <span id="locateText">locate me</span>
+                </button>
+            </div>
+            <div class="coordinates-values">
+                <div class="coord-value">
+                    <div class="coord-number" id="latitude">
+                        <span class="placeholder">Tap map to select</span>
+                    </div>
+                </div>
+                <div class="coord-value">
+                    <div class="coord-number" id="longitude">
+                        <span class="placeholder">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tree Type Selection -->
+        <div class="type-section">
+            <div class="type-header">
+                <span class="type-label">Type</span>
+                <button class="view-toggle" id="viewToggle">switch to dropdown view</button>
+            </div>
+
+            <!-- Visual Grid -->
+            <div class="visual-grid active" id="visualGrid">
+                <!-- Tree cards will be populated by JavaScript -->
+            </div>
+
+            <!-- Dropdown View -->
+            <div class="dropdown-view" id="dropdownView">
+                <select id="treeTypeDropdown">
+                    <option value="">Select tree type...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Optional Details -->
+        <div class="optional-details">
+            <button class="optional-toggle" id="optionalToggle">
+                <span>Add optional details</span>
+                <span id="toggleArrow">▼</span>
+            </button>
+            <div class="optional-content" id="optionalContent">
+                <div class="form-group">
+                    <label class="form-label">Common Name</label>
+                    <input type="text" id="commonName" placeholder="e.g., Rain Tree">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Scientific Name</label>
+                    <input type="text" id="scientificName" placeholder="e.g., Samanea saman">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="description" placeholder="Add notes about this tree..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-secondary" id="cancelBtn" style="display: none;">Cancel</button>
+            <button class="btn btn-primary" id="saveBtn" disabled>Add Tree</button>
+        </div>
+    </div>
+
+    <!-- Bottom Section - Map -->
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Tree Types Data
+        // Images should be in img/ folder: img/banyan.jpg, img/gulmohar.jpg, etc.
+        // Use img/default.jpg as fallback
+        const treeTypes = [
+            { id: 'banyan', commonName: 'Banyan', scientificName: 'Ficus benghalensis', image: 'banyan.jpg' },
+            { id: 'peltophorum', commonName: 'Yellow Gulmohar', scientificName: 'Peltophorum pterocarpum', image: 'peltophorum.jpg' },
+            { id: 'gulmohar', commonName: 'Gulmohar', scientificName: 'Delonix regia', image: 'gulmohar.jpg' },
+            { id: 'rain-tree', commonName: 'Rain Tree', scientificName: 'Samanea saman', image: 'rain-tree.jpg' },
+            { id: 'peepal', commonName: 'Peepal', scientificName: 'Ficus religiosa', image: 'peepal.jpg' },
+            { id: 'mango', commonName: 'Mango', scientificName: 'Mangifera indica', image: 'mango.jpg' },
+            { id: 'pink-trumpet', commonName: 'Pink Trumpet', scientificName: 'Tabebuia rosea', image: 'pink-trumpet.jpg' },
+            { id: 'devil-tree', commonName: 'Devil Tree', scientificName: 'Alstonia scholaris', image: 'devil-tree.jpg' },
+            { id: 'golden-shower', commonName: 'Golden Shower', scientificName: 'Cassia fistula', image: 'golden-shower.jpg' },
+            { id: 'frangipani', commonName: 'Frangipani', scientificName: 'Plumeria', image: 'frangipani.jpg' },
+            { id: 'indian-almond', commonName: 'Indian Almond', scientificName: 'Terminalia catappa', image: 'indian-almond.jpg' },
+            { id: 'ashoka', commonName: 'Ashoka', scientificName: 'Polyalthia longifolia', image: 'ashoka.jpg' },
+        ];
+
+        // State Management
+        let appState = {
+            mode: 'add', // 'add' or 'edit'
+            currentLocation: null,
+            selectedTreeType: null,
+            viewMode: 'visual', // 'visual' or 'dropdown'
+            optionalExpanded: false,
+            currentTreeId: null
+        };
+
+        // Initialize Map
+        const map = L.map('map').setView([19.0760, 72.8777], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        let currentMarker = null;
+
+        // DOM Elements
+        const elements = {
+            latitude: document.getElementById('latitude'),
+            longitude: document.getElementById('longitude'),
+            locateBtnSmall: document.getElementById('locateBtnSmall'),
+            locateIcon: document.getElementById('locateIcon'),
+            locateText: document.getElementById('locateText'),
+            viewToggle: document.getElementById('viewToggle'),
+            visualGrid: document.getElementById('visualGrid'),
+            dropdownView: document.getElementById('dropdownView'),
+            treeTypeDropdown: document.getElementById('treeTypeDropdown'),
+            optionalToggle: document.getElementById('optionalToggle'),
+            optionalContent: document.getElementById('optionalContent'),
+            toggleArrow: document.getElementById('toggleArrow'),
+            commonName: document.getElementById('commonName'),
+            scientificName: document.getElementById('scientificName'),
+            description: document.getElementById('description'),
+            saveBtn: document.getElementById('saveBtn'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            statusMessage: document.getElementById('statusMessage'),
+            loadingOverlay: document.getElementById('loadingOverlay')
+        };
+
+        // Initialize UI
+        function initializeUI() {
+            // Populate visual grid
+            treeTypes.forEach(tree => {
+                const card = document.createElement('div');
+                card.className = 'tree-card';
+                card.dataset.treeId = tree.id;
+                
+                const img = document.createElement('img');
+                img.src = `img/${tree.image}`;
+                img.onerror = () => { img.src = 'img/default.jpg'; };
+                img.alt = tree.commonName;
+                
+                const name = document.createElement('div');
+                name.className = 'tree-card-name';
+                name.textContent = tree.commonName;
+                
+                const scientific = document.createElement('div');
+                scientific.className = 'tree-card-scientific';
+                scientific.textContent = tree.scientificName;
+                
+                card.appendChild(img);
+                card.appendChild(name);
+                card.appendChild(scientific);
+                
+                card.addEventListener('click', () => selectTreeType(tree.id));
+                
+                elements.visualGrid.appendChild(card);
+            });
+
+            // Populate dropdown
+            treeTypes.forEach(tree => {
+                const option = document.createElement('option');
+                option.value = tree.id;
+                option.textContent = `${tree.commonName} (${tree.scientificName})`;
+                elements.treeTypeDropdown.appendChild(option);
+            });
+        }
+
+        // Select tree type
+        function selectTreeType(treeId) {
+            appState.selectedTreeType = treeId;
+            
+            // Update visual selection
+            document.querySelectorAll('.tree-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.treeId === treeId);
+            });
+            
+            // Update dropdown
+            elements.treeTypeDropdown.value = treeId;
+            
+            // Pre-fill names if empty
+            const tree = treeTypes.find(t => t.id === treeId);
+            if (tree && !elements.commonName.value) {
+                elements.commonName.value = tree.commonName;
+            }
+            if (tree && !elements.scientificName.value) {
+                elements.scientificName.value = tree.scientificName;
+            }
+            
+            validateForm();
+        }
+
+        // Toggle view mode
+        elements.viewToggle.addEventListener('click', () => {
+            appState.viewMode = appState.viewMode === 'visual' ? 'dropdown' : 'visual';
+            
+            if (appState.viewMode === 'visual') {
+                elements.visualGrid.classList.add('active');
+                elements.dropdownView.classList.remove('active');
+                elements.viewToggle.textContent = 'switch to dropdown view';
+            } else {
+                elements.visualGrid.classList.remove('active');
+                elements.dropdownView.classList.add('active');
+                elements.viewToggle.textContent = 'select visually';
+            }
+        });
+
+        // Dropdown change
+        elements.treeTypeDropdown.addEventListener('change', (e) => {
+            if (e.target.value) {
+                selectTreeType(e.target.value);
+            }
+        });
+
+        // Toggle optional details
+        elements.optionalToggle.addEventListener('click', () => {
+            appState.optionalExpanded = !appState.optionalExpanded;
+            elements.optionalContent.classList.toggle('expanded', appState.optionalExpanded);
+            elements.toggleArrow.textContent = appState.optionalExpanded ? '▲' : '▼';
+        });
+
+        // Update coordinates display
+        function updateCoordinates(lat, lng) {
+            elements.latitude.innerHTML = `${lat.toFixed(6)} °N`;
+            elements.longitude.innerHTML = `${lng.toFixed(6)} °E`;
+            appState.currentLocation = { lat, lng };
+            validateForm();
+        }
+
+        // Add/update marker
+        function addMarker(lat, lng) {
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+
+            // Tree emoji icon
+            const treeIcon = L.divIcon({
+                html: '🌳',
+                className: 'emoji-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            });
+
+            currentMarker = L.marker([lat, lng], { 
+                icon: treeIcon,
+                draggable: appState.mode === 'edit'
+            }).addTo(map);
+            
+            if (appState.mode === 'edit') {
+                currentMarker.on('dragend', function(e) {
+                    const pos = e.target.getLatLng();
+                    updateCoordinates(pos.lat, pos.lng);
+                });
+            }
+            
+            updateCoordinates(lat, lng);
+        }
+
+        // Map click
+        map.on('click', function(e) {
+            addMarker(e.latlng.lat, e.latlng.lng);
+        });
+
+        // Geolocation
+        elements.locateBtnSmall.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                showStatus('Geolocation not supported');
+                return;
+            }
+
+            elements.locateIcon.textContent = '⌛';
+            elements.locateText.textContent = 'locating...';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    map.setView([lat, lng], 17);
+                    addMarker(lat, lng);
+                    
+                    elements.locateIcon.textContent = '📍';
+                    elements.locateText.textContent = 'locate me';
+                },
+                function(error) {
+                    showStatus('Unable to get location: ' + error.message);
+                    elements.locateIcon.textContent = '📍';
+                    elements.locateText.textContent = 'locate me';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+
+        // Validate form
+        function validateForm() {
+            const isValid = appState.currentLocation && appState.selectedTreeType;
+            elements.saveBtn.disabled = !isValid;
+        }
+
+        // Save tree
+        elements.saveBtn.addEventListener('click', async () => {
+            if (!appState.currentLocation || !appState.selectedTreeType) return;
+
+            const treeData = {
+                id: appState.currentTreeId || generateId(),
+                latitude: appState.currentLocation.lat,
+                longitude: appState.currentLocation.lng,
+                treeTypeId: appState.selectedTreeType,
+                commonName: elements.commonName.value.trim(),
+                scientificName: elements.scientificName.value.trim(),
+                description: elements.description.value.trim(),
+                timestamp: new Date().toISOString(),
+                status: 'active'
+            };
+
+            console.log('Tree data to save:', treeData);
+            
+            // TODO: Save to Supabase (Phase 2)
+            // TODO: Save to Google Sheets (Phase 4)
+            
+            showStatus(appState.mode === 'edit' ? 'Tree updated!' : 'Tree added!');
+            resetForm();
+        });
+
+        // Cancel
+        elements.cancelBtn.addEventListener('click', () => {
+            resetForm();
+        });
+
+        // Reset form
+        function resetForm() {
+            appState.mode = 'add';
+            appState.selectedTreeType = null;
+            appState.currentLocation = null;
+            appState.currentTreeId = null;
+            
+            elements.commonName.value = '';
+            elements.scientificName.value = '';
+            elements.description.value = '';
+            
+            document.querySelectorAll('.tree-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            elements.treeTypeDropdown.value = '';
+            
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+                currentMarker = null;
+            }
+            
+            elements.latitude.innerHTML = '<span class="placeholder">Tap map to select</span>';
+            elements.longitude.innerHTML = '<span class="placeholder">—</span>';
+            
+            elements.saveBtn.textContent = 'Add Tree';
+            elements.cancelBtn.style.display = 'none';
+            document.body.classList.remove('edit-mode');
+            
+            validateForm();
+        }
+
+        // Show status message
+        function showStatus(message) {
+            elements.statusMessage.textContent = message;
+            elements.statusMessage.classList.add('show');
+            setTimeout(() => {
+                elements.statusMessage.classList.remove('show');
+            }, 2000);
+        }
+
+        // Generate ID
+        function generateId() {
+            return 'tree_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Initialize
+        initializeUI();
+        validateForm();
+    </script>
+</body>
+</html>
