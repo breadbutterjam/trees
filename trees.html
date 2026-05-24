@@ -25,7 +25,7 @@
 
         /* Top section - Form */
         .form-section {
-            height: 50vh;
+            /* height: 50vh; */
             overflow-y: auto;
             background: #f8f9fa;
             padding: 16px;
@@ -34,30 +34,27 @@
 
         /* Coordinates display */
         .coordinates {
-            background: white;
-            border-radius: 8px;
-            padding: 12px;
+            /* padding: 12px 0; */
             margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .coordinates-header {
             display: flex;
-            justify-content: space-between;
+            /* justify-content: space-between; */
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .coordinates-title {
             font-size: 14px;
-            font-weight: 600;
-            color: #495057;
+            /* font-weight: 600; */
+            color: #4e4e4f;
         }
 
         .locate-btn-small {
-            padding: 4px 12px;
-            background: #28a745;
-            color: white;
+            padding-left: 4px;
+            background: transparent;
+            color: #673AB7;
             border: none;
             border-radius: 4px;
             font-size: 12px;
@@ -65,6 +62,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            text-decoration: underline;
         }
 
         .locate-btn-small:active {
@@ -79,7 +77,7 @@
         }
 
         .coord-value {
-            flex: 1;
+            /* flex: 1; */
         }
 
         .coord-label {
@@ -101,24 +99,21 @@
 
         /* Tree Type Selection */
         .type-section {
-            background: white;
-            border-radius: 8px;
-            padding: 12px;
+            /* padding: 12px 0; */
             margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .type-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 4px;
         }
 
         .type-label {
             font-size: 14px;
-            font-weight: 600;
-            color: #495057;
+            /* font-weight: 600; */
+            color: #4e4e4f;
         }
 
         .view-toggle {
@@ -182,19 +177,19 @@
 
         /* Dropdown View */
         .dropdown-view {
-            display: none;
+            display: block;
         }
 
         .dropdown-view.active {
             display: block;
         }
 
-        .visual-grid.active {
-            display: grid;
+        .visual-grid {
+            display: none;
         }
 
-        .visual-grid:not(.active) {
-            display: none;
+        .visual-grid.active {
+            display: grid;
         }
 
         select {
@@ -204,7 +199,7 @@
             border-radius: 6px;
             font-size: 14px;
             background: white;
-            margin-bottom: 12px;
+            /* margin-bottom: 12px; */
         }
 
         select:focus {
@@ -214,11 +209,9 @@
 
         /* Optional Details */
         .optional-details {
-            background: white;
-            border-radius: 8px;
-            padding: 12px;
+            padding-bottom: 12px;
+            /* padding: 12px 0; */
             margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .optional-toggle {
@@ -231,7 +224,7 @@
             text-align: left;
             width: 100%;
             display: flex;
-            justify-content: space-between;
+            /* justify-content: space-between; */
             align-items: center;
         }
 
@@ -330,8 +323,9 @@
 
         /* Bottom section - Map */
         #map {
-            height: 50vh;
+            /* height: 50vh; */
             width: 100%;
+            flex: 1;
         }
 
         /* Status message */
@@ -386,6 +380,14 @@
             animation: spin 1s linear infinite;
         }
 
+        .tree-marker{
+            font-size: 2rem;
+        }
+
+        #locateIcon{
+            display: none;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -430,16 +432,16 @@
         <div class="type-section">
             <div class="type-header">
                 <span class="type-label">Type</span>
-                <button class="view-toggle" id="viewToggle">switch to dropdown view</button>
+                <button class="view-toggle" id="viewToggle">select visually</button>
             </div>
 
             <!-- Visual Grid -->
-            <div class="visual-grid active" id="visualGrid">
+            <div class="visual-grid" id="visualGrid">
                 <!-- Tree cards will be populated by JavaScript -->
             </div>
 
             <!-- Dropdown View -->
-            <div class="dropdown-view" id="dropdownView">
+            <div class="dropdown-view active" id="dropdownView">
                 <select id="treeTypeDropdown">
                     <option value="">Select tree type...</option>
                 </select>
@@ -449,17 +451,13 @@
         <!-- Optional Details -->
         <div class="optional-details">
             <button class="optional-toggle" id="optionalToggle">
+                <span id="toggleArrow">+</span>
                 <span>Add optional details</span>
-                <span id="toggleArrow">▼</span>
             </button>
             <div class="optional-content" id="optionalContent">
                 <div class="form-group">
-                    <label class="form-label">Common Name</label>
-                    <input type="text" id="commonName" placeholder="e.g., Rain Tree">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Scientific Name</label>
-                    <input type="text" id="scientificName" placeholder="e.g., Samanea saman">
+                    <label class="form-label">Name</label>
+                    <input type="text" id="customName" placeholder="e.g., Big tree near gate">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
@@ -505,13 +503,13 @@
             mode: 'add', // 'add' or 'edit'
             currentLocation: null,
             selectedTreeType: null,
-            viewMode: 'visual', // 'visual' or 'dropdown'
+            viewMode: 'dropdown', // 'visual' or 'dropdown'
             optionalExpanded: false,
             currentTreeId: null
         };
 
         // Initialize Map
-        const map = L.map('map').setView([19.0760, 72.8777], 13);
+        const map = L.map('map').setView([19.0755, 72.8316], 19);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
@@ -533,8 +531,7 @@
             optionalToggle: document.getElementById('optionalToggle'),
             optionalContent: document.getElementById('optionalContent'),
             toggleArrow: document.getElementById('toggleArrow'),
-            commonName: document.getElementById('commonName'),
-            scientificName: document.getElementById('scientificName'),
+            customName: document.getElementById('customName'),
             description: document.getElementById('description'),
             saveBtn: document.getElementById('saveBtn'),
             cancelBtn: document.getElementById('cancelBtn'),
@@ -593,15 +590,6 @@
             // Update dropdown
             elements.treeTypeDropdown.value = treeId;
             
-            // Pre-fill names if empty
-            const tree = treeTypes.find(t => t.id === treeId);
-            if (tree && !elements.commonName.value) {
-                elements.commonName.value = tree.commonName;
-            }
-            if (tree && !elements.scientificName.value) {
-                elements.scientificName.value = tree.scientificName;
-            }
-            
             validateForm();
         }
 
@@ -631,7 +619,7 @@
         elements.optionalToggle.addEventListener('click', () => {
             appState.optionalExpanded = !appState.optionalExpanded;
             elements.optionalContent.classList.toggle('expanded', appState.optionalExpanded);
-            elements.toggleArrow.textContent = appState.optionalExpanded ? '▲' : '▼';
+            elements.toggleArrow.textContent = appState.optionalExpanded ? '-' : '+';
         });
 
         // Update coordinates display
@@ -656,6 +644,8 @@
                 iconAnchor: [15, 30]
             });
 
+
+
             currentMarker = L.marker([lat, lng], { 
                 icon: treeIcon,
                 draggable: appState.mode === 'edit'
@@ -668,6 +658,9 @@
                 });
             }
             
+            // console.log('treeIcon:', currentMarker);
+            // currentMarker.classList.add('tree-marker');
+            currentMarker._icon.classList.add("tree-marker")
             updateCoordinates(lat, lng);
         }
 
@@ -725,8 +718,7 @@
                 latitude: appState.currentLocation.lat,
                 longitude: appState.currentLocation.lng,
                 treeTypeId: appState.selectedTreeType,
-                commonName: elements.commonName.value.trim(),
-                scientificName: elements.scientificName.value.trim(),
+                customName: elements.customName.value.trim(),
                 description: elements.description.value.trim(),
                 timestamp: new Date().toISOString(),
                 status: 'active'
@@ -753,8 +745,7 @@
             appState.currentLocation = null;
             appState.currentTreeId = null;
             
-            elements.commonName.value = '';
-            elements.scientificName.value = '';
+            elements.customName.value = '';
             elements.description.value = '';
             
             document.querySelectorAll('.tree-card').forEach(card => {
