@@ -84,6 +84,43 @@
             /* flex: 1; */
         }
 
+        .coord-input {
+            width: 110px;
+            padding: 4px 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            background: white;
+            color: #212529;
+        }
+
+        .coord-input:focus {
+            outline: none;
+            border-color: #673AB7;
+        }
+
+        .coord-input:read-only {
+            background: #f8f9fa;
+            cursor: default;
+        }
+
+        .coord-input::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        /* Remove number input arrows */
+        .coord-input::-webkit-outer-spin-button,
+        .coord-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .coord-input[type=number] {
+            -moz-appearance: textfield;
+        }
+
         .coord-label {
             font-size: 10px;
             color: #6c757d;
@@ -360,6 +397,16 @@
             background: #f8f9fa;
         }
 
+        /* Delete button */
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:active {
+            background: #c82333;
+        }
+
         /* Edit mode specific */
         .edit-mode .btn-primary {
             background: #007bff;
@@ -367,6 +414,22 @@
 
         .edit-mode .btn-primary:active {
             background: #0056b3;
+        }
+
+        /* Edit mode info banner */
+        .edit-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #856404;
+            display: none;
+        }
+
+        .edit-banner.show {
+            display: block;
         }
 
         /* Bottom section - Map */
@@ -496,14 +559,24 @@
             </div>
             <div class="coordinates-values">
                 <div class="coord-value">
-                    <div class="coord-number" id="latitude">
-                        <span class="placeholder">Tap map to select</span>
-                    </div>
+                    <input 
+                        type="number" 
+                        step="0.000001" 
+                        id="latitudeInput" 
+                        class="coord-input"
+                        placeholder="Tap map"
+                        readonly
+                    >
                 </div>
                 <div class="coord-value">
-                    <div class="coord-number" id="longitude">
-                        <span class="placeholder">—</span>
-                    </div>
+                    <input 
+                        type="number" 
+                        step="0.000001" 
+                        id="longitudeInput" 
+                        class="coord-input"
+                        placeholder="—"
+                        readonly
+                    >
                 </div>
             </div>
         </div>
@@ -530,6 +603,7 @@
 
         <!-- Action Buttons -->
         <div class="action-buttons">
+            <button class="btn btn-delete" id="deleteBtn" style="display: none;">Delete</button>
             <button class="btn btn-secondary" id="cancelBtn" style="display: none;">Cancel</button>
             <button class="btn btn-primary" id="saveBtn" disabled>Add Tree</button>
         </div>
@@ -574,6 +648,10 @@
             currentTreeId: null
         };
 
+        // Storage for saved trees
+        let savedTrees = [];
+        let treeMarkers = {}; // Map of tree ID to marker object
+
         // Initialize Map
         const map = L.map('map').setView([19.0755, 72.8316], 19);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -583,10 +661,29 @@
 
         let currentMarker = null;
 
+        // LocalStorage helper functions
+        function loadTreesFromStorage() {
+            try {
+                const stored = localStorage.getItem('savedTrees');
+                return stored ? JSON.parse(stored) : [];
+            } catch (error) {
+                console.error('Error loading trees:', error);
+                return [];
+            }
+        }
+
+        function saveTreesToStorage() {
+            try {
+                localStorage.setItem('savedTrees', JSON.stringify(savedTrees));
+            } catch (error) {
+                console.error('Error saving trees:', error);
+            }
+        }
+
         // DOM Elements
         const elements = {
-            latitude: document.getElementById('latitude'),
-            longitude: document.getElementById('longitude'),
+            latitudeInput: document.getElementById('latitudeInput'),
+            longitudeInput: document.getElementById('longitudeInput'),
             locateBtnSmall: document.getElementById('locateBtnSmall'),
             locateIcon: document.getElementById('locateIcon'),
             locateText: document.getElementById('locateText'),
@@ -604,6 +701,7 @@
             description: document.getElementById('description'),
             saveBtn: document.getElementById('saveBtn'),
             cancelBtn: document.getElementById('cancelBtn'),
+            deleteBtn: document.getElementById('deleteBtn'),
             statusMessage: document.getElementById('statusMessage'),
             loadingOverlay: document.getElementById('loadingOverlay')
         };
@@ -648,6 +746,106 @@
 
             // elements.treeTypeDropdown.selectedIndex = 1;
             // elements.treeTypeDropdown.focus();
+        }
+
+        // Create tree marker on map
+        function createTreeMarker(treeData) {
+            const treeIcon = L.divIcon({
+                html: '🌳',
+                className: 'tree-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            });
+
+            const marker = L.marker([treeData.latitude, treeData.longitude], { 
+                icon: treeIcon,
+                draggable: false
+            }).addTo(map);
+
+            // Click handler to edit tree
+            marker.on('click', function() {
+                enterEditMode(treeData.id);
+            });
+
+            // Store marker reference
+            treeMarkers[treeData.id] = marker;
+
+            return marker;
+        }
+
+        // Load and display all saved trees
+        function loadAllTrees() {
+            // Clear existing markers
+            Object.values(treeMarkers).forEach(marker => map.removeLayer(marker));
+            treeMarkers = {};
+
+            // Load from storage
+            savedTrees = loadTreesFromStorage();
+
+            // Create markers for all trees
+            savedTrees.forEach(tree => {
+                createTreeMarker(tree);
+            });
+
+            console.log(`Loaded ${savedTrees.length} trees`);
+        }
+
+        // Enter edit mode for a tree
+        function enterEditMode(treeId) {
+            const tree = savedTrees.find(t => t.id === treeId);
+            if (!tree) return;
+
+            appState.mode = 'edit';
+            appState.currentTreeId = treeId;
+            appState.currentLocation = { lat: tree.latitude, lng: tree.longitude };
+            appState.selectedTreeType = tree.treeTypeId;
+
+            // Populate form
+            selectTreeType(tree.treeTypeId);
+            elements.customName.value = tree.customName || '';
+            elements.description.value = tree.description || '';
+
+            // Update coordinates display
+            updateCoordinates(tree.latitude, tree.longitude);
+            
+            // Make coordinate inputs editable in edit mode
+            elements.latitudeInput.removeAttribute('readonly');
+            elements.longitudeInput.removeAttribute('readonly');
+
+            // Make this marker draggable
+            const marker = treeMarkers[treeId];
+            if (marker) {
+                marker.setOpacity(0.7);
+                marker.dragging.enable();
+                
+                marker.on('dragend', function(e) {
+                    const pos = e.target.getLatLng();
+                    appState.currentLocation = { lat: pos.lat, lng: pos.lng };
+                    updateCoordinates(pos.lat, pos.lng);
+                });
+            }
+
+            // Update UI
+            elements.saveBtn.textContent = 'Update';
+            elements.cancelBtn.style.display = 'block';
+            elements.deleteBtn.style.display = 'block';
+            document.body.classList.add('edit-mode');
+
+            // Scroll form into view
+            document.querySelector('.form-section').scrollTop = 0;
+        }
+
+        // Exit edit mode
+        function exitEditMode() {
+            if (appState.mode === 'edit' && appState.currentTreeId) {
+                const marker = treeMarkers[appState.currentTreeId];
+                if (marker) {
+                    marker.setOpacity(1);
+                    marker.dragging.disable();
+                }
+            }
+
+            resetForm();
         }
 
         // Select tree type
@@ -720,11 +918,58 @@
 
         // Update coordinates display
         function updateCoordinates(lat, lng) {
-            elements.latitude.innerHTML = `${lat.toFixed(6)} °N`;
-            elements.longitude.innerHTML = `${lng.toFixed(6)} °E`;
+            elements.latitudeInput.value = lat.toFixed(6);
+            elements.longitudeInput.value = lng.toFixed(6);
             appState.currentLocation = { lat, lng };
             validateForm();
         }
+
+        // Coordinate input change handlers (only work in edit mode)
+        elements.latitudeInput.addEventListener('change', function() {
+            if (appState.mode !== 'edit') return;
+            
+            const lat = parseFloat(this.value);
+            const lng = parseFloat(elements.longitudeInput.value);
+            
+            if (isNaN(lat) || isNaN(lng)) return;
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                showStatus('Invalid coordinates');
+                return;
+            }
+            
+            appState.currentLocation = { lat, lng };
+            
+            // Update marker position
+            const marker = treeMarkers[appState.currentTreeId];
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            }
+            
+            validateForm();
+        });
+
+        elements.longitudeInput.addEventListener('change', function() {
+            if (appState.mode !== 'edit') return;
+            
+            const lat = parseFloat(elements.latitudeInput.value);
+            const lng = parseFloat(this.value);
+            
+            if (isNaN(lat) || isNaN(lng)) return;
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                showStatus('Invalid coordinates');
+                return;
+            }
+            
+            appState.currentLocation = { lat, lng };
+            
+            // Update marker position
+            const marker = treeMarkers[appState.currentTreeId];
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            }
+            
+            validateForm();
+        });
 
         // Add/update marker
         function addMarker(lat, lng) {
@@ -762,7 +1007,10 @@
 
         // Map click
         map.on('click', function(e) {
-            addMarker(e.latlng.lat, e.latlng.lng);
+            // Only allow adding new marker in add mode
+            if (appState.mode === 'add') {
+                addMarker(e.latlng.lat, e.latlng.lng);
+            }
         });
 
         // Geolocation
@@ -816,11 +1064,42 @@
                 treeTypeId: appState.selectedTreeType,
                 customName: elements.customName.value.trim(),
                 description: elements.description.value.trim(),
-                timestamp: new Date().toISOString(),
+                timestamp: appState.currentTreeId 
+                    ? (savedTrees.find(t => t.id === appState.currentTreeId)?.timestamp || new Date().toISOString())
+                    : new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
                 status: 'active'
             };
 
-            console.log('Tree data to save:', treeData);
+            if (appState.mode === 'edit') {
+                // Update existing tree
+                const index = savedTrees.findIndex(t => t.id === treeData.id);
+                if (index !== -1) {
+                    savedTrees[index] = treeData;
+                    
+                    // Remove old marker
+                    if (treeMarkers[treeData.id]) {
+                        map.removeLayer(treeMarkers[treeData.id]);
+                        delete treeMarkers[treeData.id];
+                    }
+                }
+            } else {
+                // Add new tree
+                savedTrees.push(treeData);
+            }
+
+            // Save to localStorage
+            saveTreesToStorage();
+
+            // Create/update marker
+            createTreeMarker(treeData);
+            
+            // In edit mode, center map on updated tree location
+            if (appState.mode === 'edit') {
+                map.setView([treeData.latitude, treeData.longitude], map.getZoom());
+            }
+
+            console.log('Tree saved:', treeData);
             
             // TODO: Save to Supabase (Phase 2)
             // TODO: Save to Google Sheets (Phase 4)
@@ -829,13 +1108,49 @@
             resetForm();
         });
 
+        // Delete tree
+        elements.deleteBtn.addEventListener('click', () => {
+            if (!appState.currentTreeId) return;
+
+            const tree = savedTrees.find(t => t.id === appState.currentTreeId);
+            if (!tree) return;
+
+            const treeName = tree.customName || treeTypes.find(t => t.id === tree.treeTypeId)?.commonName || 'this tree';
+            
+            if (confirm(`Delete ${treeName}?`)) {
+                // Remove from array
+                savedTrees = savedTrees.filter(t => t.id !== appState.currentTreeId);
+                
+                // Remove marker
+                if (treeMarkers[appState.currentTreeId]) {
+                    map.removeLayer(treeMarkers[appState.currentTreeId]);
+                    delete treeMarkers[appState.currentTreeId];
+                }
+                
+                // Save to storage
+                saveTreesToStorage();
+                
+                showStatus('Tree deleted');
+                resetForm();
+            }
+        });
+
         // Cancel
         elements.cancelBtn.addEventListener('click', () => {
-            resetForm();
+            exitEditMode();
         });
 
         // Reset form
         function resetForm() {
+            // Clean up edit mode
+            if (appState.mode === 'edit' && appState.currentTreeId) {
+                const marker = treeMarkers[appState.currentTreeId];
+                if (marker) {
+                    marker.setOpacity(1);
+                    marker.dragging.disable();
+                }
+            }
+
             appState.mode = 'add';
             appState.selectedTreeType = null;
             appState.currentLocation = null;
@@ -854,11 +1169,17 @@
                 currentMarker = null;
             }
             
-            elements.latitude.innerHTML = '<span class="placeholder">Tap map to select</span>';
-            elements.longitude.innerHTML = '<span class="placeholder">—</span>';
+            // Reset coordinate inputs
+            elements.latitudeInput.value = '';
+            elements.longitudeInput.value = '';
+            elements.latitudeInput.placeholder = 'Tap map';
+            elements.longitudeInput.placeholder = '—';
+            elements.latitudeInput.setAttribute('readonly', 'readonly');
+            elements.longitudeInput.setAttribute('readonly', 'readonly');
             
             elements.saveBtn.textContent = 'Add Tree';
             elements.cancelBtn.style.display = 'none';
+            elements.deleteBtn.style.display = 'none';
             document.body.classList.remove('edit-mode');
             
             validateForm();
@@ -880,6 +1201,7 @@
 
         // Initialize
         initializeUI();
+        loadAllTrees();
         validateForm();
     </script>
 </body>
